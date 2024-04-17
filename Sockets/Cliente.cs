@@ -7,29 +7,29 @@ using System.Net.Sockets;
 
 class Client
 {
-    private TcpClient tcp;
-    private string nick;
-    private bool waitingPing;
+    private TcpClient tcpClient;
+    private string nickname;
+    private bool awaitingResponse;
 
-
-    public Client(TcpClient tcp)
+    public Client(TcpClient tcpClient)
     {
-        this.tcp = tcp;
-        this.nick = "Guest";
-        this.waitingPing = false;
+        this.tcpClient = tcpClient;
+        this.nickname = "Guest";
+        this.awaitingResponse = false;
     }
 
-    public bool GetWaitingPing()
+    public bool GetAwaitingResponse()
     {
-        return this.waitingPing;
+        return this.awaitingResponse;
     }
-    public void SetWaitingPing(bool waitingPing)
+
+    public void SetAwaitingResponse(bool awaitingResponse)
     {
-        this.waitingPing= waitingPing;
+        this.awaitingResponse = awaitingResponse;
     }
 
     public TcpClient GetTcpClient()
     {
-        return this.tcp;
+        return this.tcpClient;
     }
 }
