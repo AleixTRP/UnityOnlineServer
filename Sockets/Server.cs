@@ -8,26 +8,26 @@ class Server
 {
     static void Main(string[] args)
     {
-        // Server runs while it's not turned off
-        bool isServerOn = true;
+        //Mientras no sea off el servidor rula
+        bool bServerOn = true;
 
-        // Instantiate network services
-        NetworkManager networkService = new NetworkManager();
+        //Instancia los servicios de red
+        Network_Manager Network_Service = new Network_Manager();
 
-        // Start services
+        //Inicio de servicios
         StartServices();
-
-        while (isServerOn)
+        while (bServerOn)
         {
-            networkService.CheckConnection();
-            networkService.CheckMessage();
-            networkService.DisconnectClients();
+            Network_Service.CheckConnection();
+            Network_Service.CheckMessage();
+            Network_Service.DisconnectClients();
         }
 
-        // Function to start server services
+        //Funcion que inicia los servicios del servidor
         void StartServices()
         {
-            networkService.StartNetworkService();
+            Network_Service.Start_Network_Service();
         }
+
     }
 }

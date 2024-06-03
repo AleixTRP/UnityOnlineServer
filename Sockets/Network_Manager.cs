@@ -6,9 +6,9 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-public class NetworkManager
+public class Network_Manager
 {
-    private DatabaseManager dbManager;
+    private Database_Manager dbManager;
 
     private TcpListener serverListener;
     private List<Client> clients;
@@ -16,18 +16,18 @@ public class NetworkManager
     private int lastTimePing;
     private List<Client> disconnectClients;
 
-    public NetworkManager()
+    public Network_Manager()
     {
 
-        dbManager = new DatabaseManager();
+        dbManager = new Database_Manager();
 
-        // Initialize client list
+        //Inicio lista de clientes
         this.clients = new List<Client>();
 
-        // Configure listener (Access IP + Port)
+        //Configuro el listener (Ip acceso + puerto)
         this.serverListener = new TcpListener(IPAddress.Any, 6543);
 
-        // Instantiate mutex
+        //Instancia el mutex
         this.clientListMutex = new Mutex();
 
         this.lastTimePing = Environment.TickCount;
@@ -35,7 +35,11 @@ public class NetworkManager
         this.disconnectClients = new List<Client>();
     }
 
-    // Check if client connections are made
+    private void ReceivePing(Client client)
+    {
+        client.SetWaitingPing(false);
+    }
+
     public void CheckConnection()
     {
         if (Environment.TickCount - this.lastTimePing > 10000)
@@ -43,7 +47,7 @@ public class NetworkManager
             clientListMutex.WaitOne();
             foreach (Client client in this.clients)
             {
-                if (client.GetAwaitingResponse() == true)
+                if (client.GetWaitingPing() == true)
                 {
                     disconnectClients.Add(client);
                 }
@@ -57,50 +61,46 @@ public class NetworkManager
         }
     }
 
-    // Start the network service
-    public void StartNetworkService()
+    public void Start_Network_Service()
     {
         try
         {
-            // Start network services
+            //Inicio de servicios de red
             this.serverListener.Start();
 
-            // Start listening
+            //Inicio la escucha
             StartListening();
         }
         catch (Exception ex)
         {
-            // Display error if fails
+            //Saco error si falla
             Console.WriteLine(ex.ToString());
         }
 
     }
 
-    // Listen for new connections
     private void StartListening()
     {
-        // Listen
-        Console.WriteLine("Waiting for new connection");
+        //Escucho
+        Console.WriteLine("Esperando nueva conexion");
 
-        // Accept TCP connections
+        //Acepta conexiones TCP
         this.serverListener.BeginAcceptTcpClient(AcceptConnection, this.serverListener);
     }
 
-    // Accept new connections
     private void AcceptConnection(IAsyncResult ar)
     {
-        Console.WriteLine("Received a connection");
+        Console.WriteLine("Recibo una conexion");
 
-        // Store connection
+        //Almacenamos conexion
         TcpListener listener = (TcpListener)ar.AsyncState;
         clientListMutex.WaitOne();
         this.clients.Add(new Client(listener.EndAcceptTcpClient(ar)));
         clientListMutex.ReleaseMutex();
-        // Listen again
+        //Vuelvo a escuchar
         StartListening();
     }
 
-    // Send ping to a client
     private void SendPing(Client client)
     {
         try
@@ -108,18 +108,17 @@ public class NetworkManager
             StreamWriter writer = new StreamWriter(client.GetTcpClient().GetStream());
             writer.WriteLine("Ping");
             writer.Flush();
-            client.SetAwaitingResponse(true);
+            client.SetWaitingPing(true);
         }
-        catch (Exception ex) { Console.WriteLine("Error sending ping to user"); }
+        catch (Exception ex) { Console.WriteLine("Error al enviar ping al usuario"); }
     }
 
-    // Register new user
     public void Register(string nick, string password, string race, StreamWriter writer)
     {
         bool registerSuccess = dbManager.Register(nick, password, race);
         if (registerSuccess)
         {
-            Console.WriteLine("Registration completed");
+            Console.WriteLine("Registro completado");
             writer.WriteLine("true");
             writer.Flush();
         }
@@ -130,31 +129,30 @@ public class NetworkManager
         }
     }
 
-    // Login
     public void Login(string nick, string password, StreamWriter writer)
     {
         string loginResult = dbManager.Login(nick, password);
         if (loginResult.StartsWith("true"))
         {
-            Console.WriteLine("Login completed");
+            Console.WriteLine("Login successful");
             writer.WriteLine(loginResult);
             writer.Flush();
         }
         else
         {
-            Console.WriteLine("Failed to log in");
+            Console.WriteLine("Login failed");
             writer.WriteLine("false");
             writer.Flush();
         }
     }
 
-    // Disconnect clients
+
     public void DisconnectClients()
     {
         clientListMutex.WaitOne();
         foreach (Client client in this.disconnectClients)
         {
-            Console.Write("Disconnecting users");
+            Console.Write("Desconectando usuarios");
             client.GetTcpClient().Close();
             this.clients.Remove(client);
         }
@@ -162,26 +160,22 @@ public class NetworkManager
         clientListMutex.ReleaseMutex();
     }
 
-    // Handle data received from clients
     private void ManageData(Client client, string data)
     {
-        // Split data into parameters
         string[] parameters = data.Split('/');
 
         switch (parameters[0])
         {
-            // If the action is LOGIN then call login function
             case "LOGIN":
                 Login(parameters[1], parameters[2], new StreamWriter(client.GetTcpClient().GetStream()));
                 break;
-            // If the action is REGISTER then call register function
             case "REGISTER":
                 Register(parameters[1], parameters[2], parameters[3], new StreamWriter(client.GetTcpClient().GetStream()));
                 break;
         }
     }
 
-    // Check messages received from clients
+
     public void CheckMessage()
     {
         clientListMutex.WaitOne();
